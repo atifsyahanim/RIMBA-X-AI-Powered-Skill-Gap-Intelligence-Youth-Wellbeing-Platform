@@ -29,13 +29,16 @@ export async function middleware(request: NextRequest) {
         }
     )
 
+    
     // Refresh the auth session
     const {
         data: { user },
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser() 
+    // FAKE FOR DEMO PURPOSE
+    /*
+    const user = { id: "demo-user" } */
 
-    const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
-
+    const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes 
     // Check session timeout for authenticated users on protected routes
     if (user) {
         const lastActivity = request.cookies.get('last_activity')?.value

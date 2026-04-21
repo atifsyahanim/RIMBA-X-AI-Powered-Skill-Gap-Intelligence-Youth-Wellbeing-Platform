@@ -1,46 +1,73 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { createClient } from '@/lib/supabase/client'
-import { toast } from 'react-hot-toast'
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "react-hot-toast";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const supabase = createClient()
-  const [loading, setLoading] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const router = useRouter();
+  const supabase = createClient();
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-      })
+      });
 
       if (error) {
-        toast.error(error.message)
+        toast.error(error.message);
       } else {
         // Ensure user progress/stats rows exist (idempotent)
-        await fetch('/api/init-user', { method: 'POST', credentials: 'include' }).catch(() => null)
-        toast.success('Logged in successfully!')
-        router.push('/dashboard')
-        router.refresh()
+        await fetch("/api/init-user", {
+          method: "POST",
+          credentials: "include",
+        }).catch(() => null);
+        toast.success("Logged in successfully!");
+        router.push("/dashboard");
+        router.refresh();
       }
     } catch (err) {
-      toast.error('An unexpected error occurred')
-      console.error(err)
+      toast.error("An unexpected error occurred");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+
+    /*
+    try {
+      // FAKE LOGIN FOR DEMO PURPOSE
+      await new Promise((res) => setTimeout(res, 500));
+
+      localStorage.setItem(
+        "mock_user",
+        JSON.stringify({
+          email,
+          name: "Demo User",
+        }),
+      );
+
+      toast.success("Logged in successfully!");
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      toast.error("An unexpected error occurred");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    } */
+  };
 
   return (
     <div className="w-full max-w-sm">
@@ -78,7 +105,10 @@ export default function LoginPage() {
           />
 
           <div className="text-right -mt-2">
-            <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+            <Link
+              href="/forgot-password"
+              className="text-xs text-primary hover:underline"
+            >
               Forgot password?
             </Link>
           </div>
@@ -91,11 +121,11 @@ export default function LoginPage() {
 
       {/* Footer link */}
       <p className="mt-5 text-center text-sm text-text-muted">
-        Don&apos;t have an account?{' '}
+        Don&apos;t have an account?{" "}
         <Link href="/signup" className="text-primary font-bold hover:underline">
           Sign up
         </Link>
       </p>
     </div>
-  )
+  );
 }

@@ -1,6 +1,6 @@
 # 🎓 RimbaX AI Tutor
 
-**Free AI-Powered Personal Tutoring for ASEAN Youth**
+**Free AI-Powered Personal Tutoring for Youth**
 
 Transform static learning materials into real-time, human-like tutoring experiences powered by Google Gemini AI.
 

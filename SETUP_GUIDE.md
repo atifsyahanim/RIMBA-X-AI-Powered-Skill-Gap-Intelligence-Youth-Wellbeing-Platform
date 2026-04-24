@@ -1,6 +1,7 @@
 # RimbaX AI Tutor - Complete Setup Guide
 
 ## 📖 Table of Contents
+
 1. [Project Overview](#project-overview)
 2. [Tech Stack](#tech-stack)
 3. [Prerequisites](#prerequisites)
@@ -16,9 +17,11 @@
 ## 📋 Project Overview
 
 ### What is RimbaX?
+
 RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (university students, TVET learners, and rural secondary school students). It transforms static learning resources into real-time, human-like tutoring experiences.
 
 ### Core Features
+
 - 📚 **Personalized Learning**: Upload your study materials (PDF, DOCX, XLSX, TXT)
 - 🤖 **AI Tutor**: Powered by Google's Gemini AI with RAG (Retrieval-Augmented Generation)
 - 🎭 **3D Avatar**: Interactive Ready Player Me avatar with emotions
@@ -27,6 +30,7 @@ RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (u
 - 🌏 **Multi-language**: Support for EN, MS, ID, VI, TH
 
 ### Target Users
+
 - University students in ASEAN countries
 - TVET (Technical and Vocational Education and Training) learners
 - Rural secondary school students
@@ -37,6 +41,7 @@ RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (u
 ## 💻 Tech Stack
 
 ### Frontend
+
 - **Framework**: Next.js 14+ (App Router)
 - **UI Library**: React 18+
 - **Styling**: Tailwind CSS
@@ -45,23 +50,27 @@ RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (u
 - **Language**: TypeScript
 
 ### Backend
+
 - **Runtime**: Node.js 20+
 - **API**: Next.js API Routes (serverless functions)
 - **File Processing**: pdf-parse, mammoth, xlsx
 
 ### AI & Voice
+
 - **AI Model**: Google Gemini API (gemini-1.5-flash)
 - **Voice Input**: Google Cloud Speech-to-Text API
 - **Voice Output**: Google Cloud Text-to-Speech API
 - **Vector DB**: Supabase with pgvector extension
 
 ### Database & Storage
+
 - **Database**: Supabase PostgreSQL
 - **Vector Storage**: Supabase with pgvector
 - **File Storage**: Supabase Storage
 - **Authentication**: Supabase Auth
 
 ### Security
+
 - **Sanitization**: DOMPurify
 - **Rate Limiting**: express-rate-limit
 - **Malware Scanning**: ClamScan (optional)
@@ -74,6 +83,7 @@ RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (u
 ### Required Software
 
 #### 1. Node.js (v20 or higher)
+
 - **Download**: https://nodejs.org/
 - **Verify installation**:
   ```bash
@@ -82,6 +92,7 @@ RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (u
   ```
 
 #### 2. Git
+
 - **Download**: https://git-scm.com/
 - **Verify installation**:
   ```bash
@@ -89,6 +100,7 @@ RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (u
   ```
 
 #### 3. Code Editor
+
 - **Recommended**: Visual Studio Code (https://code.visualstudio.com/)
 - **Extensions**:
   - ESLint
@@ -99,6 +111,7 @@ RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (u
 ### Required Accounts & API Keys
 
 #### 1. Supabase Account (Free Tier)
+
 - **Sign up**: https://supabase.com/
 - **What you'll get**:
   - PostgreSQL database
@@ -108,6 +121,7 @@ RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (u
 - **Cost**: FREE (2 free projects)
 
 #### 2. Google Cloud Platform Account
+
 - **Sign up**: https://cloud.google.com/
 - **Enable APIs**:
   - Speech-to-Text API
@@ -119,11 +133,13 @@ RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (u
   - Text-to-Speech: 4 million characters/month
 
 #### 3. Google AI Studio (Gemini API)
+
 - **Sign up**: https://aistudio.google.com/
 - **Get API Key**: Create a free API key
 - **Cost**: FREE tier includes generous limits
 
 #### 4. Ready Player Me (Optional - for Avatar)
+
 - **Sign up**: https://readyplayer.me/
 - **What it does**: Provides customizable 3D avatars
 - **Cost**: FREE
@@ -135,6 +151,7 @@ RimbaX is a free AI-powered personal tutoring system designed for ASEAN youth (u
 ### Step 1: Clone or Initialize Project
 
 **Option A: Start Fresh (Recommended)**
+
 ```bash
 # Navigate to your projects folder
 cd c:\Users\60195\Documents\rimbax-ai-tutor
@@ -143,6 +160,7 @@ cd c:\Users\60195\Documents\rimbax-ai-tutor
 ```
 
 **Option B: Clone from Git (if repository exists)**
+
 ```bash
 git clone <repository-url>
 cd rimbax-ai-tutor
@@ -185,7 +203,7 @@ npm install xlsx@latest
 npm install helmet@latest
 npm install cors@latest
 npm install express-rate-limit@latest
-npm install isomorphic-dompurify@latest
+npm install dompurify@latest
 ```
 
 ### Step 6: Install Development Dependencies
@@ -247,6 +265,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ### Step 3: Getting Your API Keys
 
 #### Supabase Keys
+
 1. Go to https://app.supabase.com/
 2. Create a new project (or select existing)
 3. Go to Settings → API
@@ -256,6 +275,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
    - service_role key → `SUPABASE_SERVICE_ROLE_KEY` (⚠️ Keep secret!)
 
 #### Google Cloud Credentials
+
 1. Go to https://console.cloud.google.com/
 2. Create a new project (e.g., "rimbax-ai-tutor")
 3. Enable APIs:
@@ -272,6 +292,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
    - Download and save as `google-credentials.json` in project root
 
 #### Gemini API Key
+
 1. Go to https://aistudio.google.com/
 2. Click "Get API Key"
 3. Create new API key
@@ -282,6 +303,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ## 🗄️ Database Setup
 
 ### Step 1: Create Supabase Project
+
 1. Go to https://app.supabase.com/
 2. Click "New Project"
 3. Fill in:
@@ -291,6 +313,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 4. Click "Create new project" (takes ~2 minutes)
 
 ### Step 2: Enable pgvector Extension
+
 1. In Supabase Dashboard → SQL Editor
 2. Click "New Query"
 3. Run:
@@ -466,12 +489,13 @@ $$;
 4. Public: NO (keep private)
 5. Click "Create bucket"
 6. Go to Policies → Add new policy for the bucket:
+
    ```sql
    -- Users can upload to their own folder
    CREATE POLICY "Users can upload own files"
    ON storage.objects FOR INSERT
    WITH CHECK (
-     bucket_id = 'user-materials' 
+     bucket_id = 'user-materials'
      AND auth.uid()::text = (storage.foldername(name))[1]
    );
 
@@ -479,7 +503,7 @@ $$;
    CREATE POLICY "Users can view own files"
    ON storage.objects FOR SELECT
    USING (
-     bucket_id = 'user-materials' 
+     bucket_id = 'user-materials'
      AND auth.uid()::text = (storage.foldername(name))[1]
    );
    ```
@@ -534,6 +558,7 @@ npm run format  # (if configured)
 ## 🛠️ Development Workflow
 
 ### Daily Development Checklist
+
 1. Pull latest changes: `git pull`
 2. Install new dependencies: `npm install`
 3. Run development server: `npm run dev`
@@ -543,6 +568,7 @@ npm run format  # (if configured)
 7. Push changes: `git push`
 
 ### Folder Structure
+
 ```
 rimbax-ai-tutor/
 ├── app/                      # Next.js App Router
@@ -572,6 +598,7 @@ rimbax-ai-tutor/
 ```
 
 ### Git Workflow
+
 ```bash
 # Create feature branch
 git checkout -b feature/voice-interaction
@@ -593,7 +620,9 @@ git push origin feature/voice-interaction
 ### Common Issues
 
 #### Issue: `npm install` fails
+
 **Solution:**
+
 ```bash
 # Clear npm cache
 npm cache clean --force
@@ -606,19 +635,25 @@ npm install
 ```
 
 #### Issue: Supabase connection error
+
 **Solution:**
+
 - Verify `.env.local` has correct credentials
 - Check if Supabase project is active
 - Ensure RLS policies are set up correctly
 
 #### Issue: Google Cloud API authentication fails
+
 **Solution:**
+
 - Verify `google-credentials.json` exists in project root
 - Check if APIs are enabled in Google Cloud Console
 - Ensure service account has correct roles
 
 #### Issue: Port 3000 already in use
+
 **Solution:**
+
 ```bash
 # Kill process on port 3000 (Windows)
 npx kill-port 3000
@@ -628,7 +663,9 @@ npm run dev -- -p 3001
 ```
 
 #### Issue: TypeScript errors
+
 **Solution:**
+
 ```bash
 # Restart TypeScript server in VS Code
 # Ctrl+Shift+P → "TypeScript: Restart TS Server"
@@ -638,7 +675,9 @@ npm run build
 ```
 
 #### Issue: Tailwind CSS classes not working
+
 **Solution:**
+
 - Check `tailwind.config.ts` content paths
 - Restart development server
 - Clear browser cache
@@ -648,6 +687,7 @@ npm run build
 ## 📚 Additional Resources
 
 ### Documentation
+
 - **Next.js**: https://nextjs.org/docs
 - **Supabase**: https://supabase.com/docs
 - **Gemini API**: https://ai.google.dev/docs
@@ -655,10 +695,12 @@ npm run build
 - **React Three Fiber**: https://docs.pmnd.rs/react-three-fiber
 
 ### Security Resources
+
 - **OWASP Top 10**: https://owasp.org/www-project-top-ten/
 - **Supabase RLS**: https://supabase.com/docs/guides/auth/row-level-security
 
 ### Learning Resources
+
 - **Next.js Tutorial**: https://nextjs.org/learn
 - **TypeScript Handbook**: https://www.typescriptlang.org/docs/
 - **Tailwind CSS Tutorial**: https://tailwindcss.com/docs/utility-first
@@ -668,6 +710,7 @@ npm run build
 ## 🎯 Next Steps
 
 After completing setup:
+
 1. ✅ Verify all prerequisites are installed
 2. ✅ Set up environment variables
 3. ✅ Create and configure Supabase database
@@ -679,6 +722,7 @@ After completing setup:
 ## 📞 Support
 
 If you encounter issues:
+
 1. Check this documentation
 2. Review error messages carefully
 3. Search existing issues on GitHub

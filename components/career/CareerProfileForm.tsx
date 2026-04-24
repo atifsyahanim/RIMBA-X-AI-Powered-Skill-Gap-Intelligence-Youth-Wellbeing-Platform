@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { SkillTagInput } from "./SkillTagInput";
 import toast from "react-hot-toast";
+import { createClient } from "@/lib/supabase/client";
 
 const LEVELS = [
   "SPM",
@@ -202,21 +203,31 @@ export function CareerProfileForm({
 
   async function handleSubmit() {
     setSaving(true);
+
     try {
+      const supabase = createClient();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       const res = await fetch("/api/career/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          user_id: user?.id,
           ...form,
           graduation_year: form.graduation_year
             ? Number(form.graduation_year)
             : undefined,
         }),
       });
+
       if (!res.ok) throw new Error("Failed to save profile");
+
       toast.success("Career profile saved! +50 XP");
       onSuccess?.();
-    } catch {
+    } catch (err) {
       toast.error("Could not save profile. Try again.");
     } finally {
       setSaving(false);

@@ -1,6 +1,7 @@
-export const dynamic = "force-dynamic";
+"use client";
 
-("use client");
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
@@ -28,6 +29,16 @@ import { Button } from "@/components/ui/Button";
 import type { SkillGapAnalysis, SkillGap } from "@/types";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { createClient } from "@/lib/supabase/client"; // ADD THIS IMPORT
+
+// Helper to get auth token
+async function getAuthToken() {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token;
+}
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -153,12 +164,10 @@ function ReadinessProgressBar({
   const gain = target - current;
   return (
     <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm p-6 mb-8">
-      {/* Decorative blurred orbs */}
       <div className="absolute -top-6 -right-6 w-32 h-32 bg-violet-200 rounded-full blur-3xl opacity-30 pointer-events-none" />
       <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-orange-200 rounded-full blur-3xl opacity-30 pointer-events-none" />
 
       <div className="relative z-10">
-        {/* Title row */}
         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-0.5">
@@ -200,7 +209,6 @@ function ReadinessProgressBar({
           </div>
         </div>
 
-        {/* Segmented bar — each segment = 1 week */}
         <div className="flex gap-1 h-3">
           {Array.from({ length: weeks }).map((_, i) => {
             const doneCount = Math.floor((current / target) * weeks);
@@ -252,7 +260,6 @@ function RoadmapPhaseCard({ phase, index, isLast }: RoadmapPhaseCardProps) {
 
   return (
     <div className="relative">
-      {/* Connector line segment — skip on last card */}
       {!isLast && (
         <motion.div
           initial={{ scaleY: 0 }}
@@ -276,7 +283,6 @@ function RoadmapPhaseCard({ phase, index, isLast }: RoadmapPhaseCardProps) {
         suppressHydrationWarning
         className={`group relative flex ${isEven ? "flex-row" : "flex-row-reverse"} items-start gap-0`}
       >
-        {/* ── Numbered Node ── */}
         <div className="relative z-10 flex flex-col items-center shrink-0 mx-4">
           <div
             className={`absolute inset-0 rounded-full bg-linear-to-br ${palette.bg} blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-500 scale-150`}
@@ -296,7 +302,6 @@ function RoadmapPhaseCard({ phase, index, isLast }: RoadmapPhaseCardProps) {
           </div>
         </div>
 
-        {/* ── Card ── */}
         <motion.div
           whileHover={{ y: -4 }}
           transition={{ type: "spring", stiffness: 280, damping: 20 }}
@@ -361,16 +366,6 @@ function RoadmapPhaseCard({ phase, index, isLast }: RoadmapPhaseCardProps) {
                   className={`h-full rounded-full bg-linear-to-r ${palette.bar}`}
                 />
               </div>
-              <div className="flex justify-between mt-1">
-                {["0%", "25%", "50%", "75%", "100%"].map((t) => (
-                  <span
-                    key={t}
-                    className="text-[8px] text-gray-300 font-medium"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
             </div>
 
             {skill.resources && skill.resources.length > 0 && (
@@ -385,7 +380,6 @@ function RoadmapPhaseCard({ phase, index, isLast }: RoadmapPhaseCardProps) {
                       href={r.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label={`Open resource: ${r.title}`}
                       className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg border transition-all hover:scale-[1.03] ${palette.soft}`}
                     >
                       <ExternalLink size={8} />
@@ -403,7 +397,6 @@ function RoadmapPhaseCard({ phase, index, isLast }: RoadmapPhaseCardProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
                 suppressHydrationWarning
-                aria-label={`Unlock module: ${skill.skill}`}
                 className={`w-full bg-linear-to-r ${palette.bg} text-white font-black text-sm py-3 rounded-2xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-shadow`}
               >
                 <Lock size={13} /> Unlock This Phase <ArrowRight size={13} />
@@ -424,7 +417,12 @@ export default function CareerAnalysePage() {
 
   const loadLatest = useCallback(async () => {
     try {
-      const res = await fetch("/api/career/analyse?latest=1");
+      const token = await getAuthToken();
+      const res = await fetch("/api/career/analyse?latest=1", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (res.ok) {
         const json = await res.json();
         setAnalysis(json.data ?? null);
@@ -437,36 +435,38 @@ export default function CareerAnalysePage() {
     }
   }, []);
 
-  useEffect(() => {
-    loadLatest();
-  }, [loadLatest]);
-
-  async function runAnalysis() {
+  // ADD THE MISSING runAnalysis FUNCTION
+  const runAnalysis = async () => {
     setRunning(true);
     try {
+      const token = await getAuthToken();
       const res = await fetch("/api/career/analyse", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({}),
       });
       const json = await res.json();
-      if (res.status === 400 && json.error?.includes("profile")) {
-        setNoProfile(true);
-        toast.error("Complete your career profile first.");
-        return;
-      }
       if (!res.ok) {
-        toast.error(json.error || "Analysis failed. Try again.");
+        toast.error(json.error || "Something went wrong");
         return;
       }
       setAnalysis(json.data);
       toast.success("Analysis complete! +75 XP");
-    } catch {
-      toast.error("Something went wrong.");
+      setNoProfile(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to run analysis");
     } finally {
       setRunning(false);
     }
-  }
+  };
+
+  useEffect(() => {
+    loadLatest();
+  }, [loadLatest]);
 
   const critical =
     analysis?.gap_skills.filter((s) => s.importance === "critical") ?? [];
@@ -597,7 +597,6 @@ export default function CareerAnalysePage() {
                 suppressHydrationWarning
                 className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between h-full"
               >
-                {/* Score section */}
                 <div className="flex flex-col items-center justify-center pt-4 pb-6 flex-1">
                   <SkillMatchScore
                     score={analysis.match_score}
@@ -616,10 +615,8 @@ export default function CareerAnalysePage() {
                   </div>
                 </div>
 
-                {/* Divider */}
                 <div className="border-t border-gray-100 my-4" />
 
-                {/* Breakdown section */}
                 <div>
                   <div className="flex items-center gap-2 mb-4 shrink-0">
                     <TrendingUp size={14} className="text-primary" />
@@ -700,7 +697,6 @@ export default function CareerAnalysePage() {
                 suppressHydrationWarning
                 className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-full"
               >
-                {/* Summary Section */}
                 <div className="flex flex-col flex-1">
                   <div className="flex items-center gap-2 shrink-0 mb-4">
                     <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
@@ -758,10 +754,8 @@ export default function CareerAnalysePage() {
                   </div>
                 </div>
 
-                {/* Divider */}
                 <div className="border-t border-gray-100 my-4" />
 
-                {/* Required Skills Section */}
                 <div>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2 shrink-0">
                     <Zap size={14} className="text-violet-500" /> Required for{" "}
@@ -823,7 +817,6 @@ export default function CareerAnalysePage() {
                 suppressHydrationWarning
                 className="mt-10 mb-4"
               >
-                {/* Section Header */}
                 <div className="text-center mb-8">
                   <div className="inline-flex items-center gap-2 bg-violet-50 border border-violet-100 px-4 py-1.5 rounded-full mb-4">
                     <Zap size={12} className="text-violet-500" />
@@ -855,14 +848,12 @@ export default function CareerAnalysePage() {
                   </p>
                 </div>
 
-                {/* Readiness Journey Bar */}
                 <ReadinessProgressBar
                   current={analysis.match_score}
                   target={targetReadiness}
                   weeks={roadmapPhases.length * 2}
                 />
 
-                {/* Focus Area Chips */}
                 {topCriticalChips.length > 0 && (
                   <div className="flex flex-wrap justify-center gap-3 mb-10">
                     {topCriticalChips.map((skill, i) => {
@@ -877,7 +868,6 @@ export default function CareerAnalysePage() {
                             damping: 15,
                           }}
                           suppressHydrationWarning
-                          aria-label={`Focus skill: ${skill.skill}`}
                           className={`flex items-center gap-2 px-4 py-2.5 rounded-full border-2 cursor-default ${p.soft} shadow-sm`}
                         >
                           {getCategoryIcon(skill.category, 13)}
@@ -893,7 +883,6 @@ export default function CareerAnalysePage() {
                   </div>
                 )}
 
-                {/* Timeline */}
                 <div className="relative">
                   <div className="flex flex-col gap-10">
                     {roadmapPhases.map((phase, index) => (
@@ -907,7 +896,6 @@ export default function CareerAnalysePage() {
                   </div>
                 </div>
 
-                {/* AI Recommendation Banner */}
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}

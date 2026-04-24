@@ -33,7 +33,7 @@ const OCR_FALLBACK_THRESHOLD = 100;
  */
 async function parsePDFWithGemini(buffer: Buffer): Promise<string> {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const base64 = buffer.toString('base64');
 

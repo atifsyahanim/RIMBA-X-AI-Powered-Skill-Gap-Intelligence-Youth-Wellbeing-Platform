@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Complete your career profile first' }, { status: 400 })
   }
 
-  const model = getGeminiModel('gemini-2.0-flash')
+  const model = getGeminiModel('gemini-2.5-flash')
   const prompt = CAREER_RECOMMEND_PROMPT(profile as CareerProfile)
 
   let rawText = ''

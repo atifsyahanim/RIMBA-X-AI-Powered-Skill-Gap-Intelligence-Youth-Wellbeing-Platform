@@ -12,11 +12,11 @@ const genAI = new GoogleGenerativeAI(apiKey);
 
 /**
  * Get Gemini model instance.
- * @param modelName - Defaults to 'gemini-2.0-flash'
+ * @param modelName 
  * @param options.systemInstruction - Optional system prompt passed to the model
  */
 export function getGeminiModel(
-  modelName: string = 'gemini-2.0-flash',
+  modelName: string = 'gemini-2.5-flash',
   options?: { systemInstruction?: string }
 ) {
   return genAI.getGenerativeModel({ model: modelName, ...options });
@@ -153,7 +153,7 @@ export async function generateTutorResponse(
   settings: TutorSettings = DEFAULT_TUTOR_SETTINGS
 ): Promise<string> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     systemInstruction: buildSystemPrompt(settings),
   });
 
@@ -192,7 +192,7 @@ export async function* generateStreamingResponse(
   settings: TutorSettings = DEFAULT_TUTOR_SETTINGS
 ): AsyncGenerator<string> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     systemInstruction: buildSystemPrompt(settings),
   });
 

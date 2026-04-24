@@ -1311,8 +1311,17 @@ function CareChat({
   const [isSimulatingChat, setIsSimulatingChat] = useState(false);
   const [chatMessages, setChatMessages] = useState<
     { role: "user" | "assistant"; text: string }[]
-  >(() => [{ role: "assistant", text: getGreeting(state, ls) }]);
+  >([]); // Start with empty array, we'll add greeting when chat opens
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Add greeting when chat first opens
+  useEffect(() => {
+    if (isChatOpen && chatMessages.length === 0) {
+      const greeting = getGreeting(state, ls);
+      setChatMessages([{ role: "assistant", text: greeting }]);
+    }
+  }, [isChatOpen, state, ls, chatMessages.length]);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, isSimulatingChat]);
@@ -1425,44 +1434,70 @@ Reference specific numbers and module names when relevant. Be concrete, not gene
                   e.preventDefault();
                   if (!chatInput.trim() || isSimulatingChat) return;
                   const currentInput = chatInput;
+
+                  // Filter out the initial assistant greeting from history
+                  // because Gemini expects first message to be from user
+                  const historyForAPI = chatMessages.filter((msg, index) => {
+                    // Remove the very first assistant greeting message
+                    if (index === 0 && msg.role === "assistant") return false;
+                    return true;
+                  });
+
                   const currentHistory = [
-                    ...chatMessages,
+                    ...historyForAPI,
                     { role: "user" as const, text: currentInput },
                   ];
-                  setChatMessages(currentHistory);
+
+                  setChatMessages((prev) => [
+                    ...prev,
+                    { role: "user", text: currentInput },
+                  ]);
                   setChatInput("");
                   setIsSimulatingChat(true);
                   try {
-                    const response = await fetch(
-                      "https://api.anthropic.com/v1/messages",
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          model: "claude-sonnet-4-20250514",
-                          max_tokens: 1000,
-                          system: systemPrompt,
-                          messages: currentHistory.map((m) => ({
-                            role: m.role === "assistant" ? "assistant" : "user",
-                            content: m.text,
-                          })),
-                        }),
-                      },
-                    );
+                    const response = await fetch("/api/chat/carely", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        message: currentInput,
+                        history: currentHistory,
+                      }),
+                    });
+
+                    if (!response.ok) {
+                      throw new Error(`HTTP ${response.status}`);
+                    }
+
                     const data = await response.json();
-                    const reply =
-                      data.content?.[0]?.text ??
-                      "I'm here for you. Tell me more 🌿";
+                    console.log("CARELY RESPONSE RAW:", data);
+
+                    let reply = "I'm here for you. Tell me more 🌿";
+
+                    if (data.text) {
+                      reply = data.text;
+                    } else if (data.response) {
+                      reply = data.response;
+                    } else if (data.message) {
+                      reply = data.message;
+                    } else if (
+                      data.content &&
+                      Array.isArray(data.content) &&
+                      data.content[0]?.text
+                    ) {
+                      reply = data.content[0].text;
+                    }
+
                     setChatMessages((prev) => [
                       ...prev,
                       { role: "assistant", text: reply },
                     ]);
-                  } catch {
+                  } catch (err: unknown) {
+                    console.error("CARESPACE CHAT ERROR:", err);
                     setChatMessages((prev) => [
                       ...prev,
                       {
                         role: "assistant",
-                        text: "Something went wrong. But I'm still here for you 💜",
+                        text: `Sorry, I'm having trouble connecting. Please try again.`,
                       },
                     ]);
                   } finally {
@@ -1521,9 +1556,34 @@ Reference specific numbers and module names when relevant. Be concrete, not gene
 // MAIN — scenario generated once on mount
 // ─────────────────────────────────────────────
 export default function CareSpacePage() {
-  // useMemo with no deps = generated once per page load, fresh on refresh
-  const ls = useMemo(() => generateScenario(), []);
-  const state = useMemo(() => deriveWellbeingState(ls), [ls]);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Generate scenario only on client side to prevent hydration mismatch
+  const ls = useMemo(() => {
+    if (!isMounted) return null;
+    return generateScenario();
+  }, [isMounted]);
+
+  const state = useMemo(() => {
+    if (!ls) return null;
+    return deriveWellbeingState(ls);
+  }, [ls]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Show loading during SSR/hydration
+  if (!isMounted || !ls || !state) {
+    return (
+      <main className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading your wellbeing dashboard...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#F8FAFC]">

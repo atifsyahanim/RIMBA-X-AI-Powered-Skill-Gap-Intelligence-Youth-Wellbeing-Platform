@@ -1,120 +1,163 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit'
-import { sanitizeInput } from '@/lib/security/sanitization'
-import { z } from 'zod'
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-const workExpSchema = z.object({
-  company: z.string().max(200),
-  role: z.string().max(200),
-  duration_months: z.number().min(0).max(600).optional().default(0),
-  description: z.string().max(1000).optional().default(''),
-})
+// IMPORTANT: server client (NOT browser client)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SECRET_KEY!,
+);
 
-const profileSchema = z.object({
-  full_name: z.string().max(200).optional(),
-  current_level: z.string().max(100),
-  field_of_study: z.string().max(200).optional(),
-  institution: z.string().max(200).optional(),
-  graduation_year: z.number().min(1950).max(2035).optional().nullable(),
-  target_career: z.string().min(1).max(200),
-  target_industry: z.string().max(200).optional(),
-  work_experience: z.array(workExpSchema).optional().default([]),
-  current_skills: z.array(z.string().max(100)).max(100).optional().default([]),
-  skills: z.array(z.string().max(100)).max(100).optional().default([]),
-  certifications: z.array(z.string().max(200)).max(50).optional().default([]),
-  career_goals: z.string().max(2000).optional(),
-  location: z.string().max(200).optional().default('Malaysia'),
-})
+// GET handler - fetches the current user's profile
+export async function GET(req: Request) {
+  try {
+    console.log("=== GET /api/career/profile START ===");
+    
+    // Get user_id from query params
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('user_id');
+    
+    console.log("UserId from query:", userId);
+    
+    if (!userId) {
+      console.error("No user_id provided");
+      return NextResponse.json(
+        { error: "Missing user_id parameter" },
+        { status: 400 }
+      );
+    }
 
-export async function POST(req: NextRequest) {
-  const ip = getClientIp(req)
-  const { allowed } = await checkRateLimit(ip, { name: 'career', max: 20, windowMs: 60 * 60 * 1000 })
-  if (!allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+    // First, let's test if we can connect to Supabase at all
+    console.log("Attempting to query career_profiles table...");
+    
+    const { data, error } = await supabase
+      .from("career_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: error.message, details: error.details },
+        { status: 500 }
+      );
+    }
 
-  let body: unknown
-  try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
-
-  const parsed = profileSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 })
-
-  const d = parsed.data
-  const existing = await supabase.from('career_profiles').select('id, created_at').eq('user_id', user.id).maybeSingle()
-  const isNew = !existing.data
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profile, error } = await (supabase.from('career_profiles') as any)
-    .upsert({
-      user_id: user.id,
-      full_name: d.full_name ? sanitizeInput(d.full_name) : null,
-      current_level: d.current_level,
-      field_of_study: d.field_of_study ? sanitizeInput(d.field_of_study) : null,
-      institution: d.institution ? sanitizeInput(d.institution) : null,
-      graduation_year: d.graduation_year ?? null,
-      target_career: sanitizeInput(d.target_career),
-      target_industry: d.target_industry ? sanitizeInput(d.target_industry) : null,
-      work_experience: d.work_experience,
-      skills: (d.current_skills?.length ? d.current_skills : d.skills ?? []).map(s => sanitizeInput(s)),
-      certifications: (d.certifications ?? []).map(c => sanitizeInput(c)),
-      career_goals: d.career_goals ? sanitizeInput(d.career_goals) : null,
-      location: sanitizeInput(d.location ?? 'Malaysia'),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' })
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
-
-  // Award XP on first creation
-  if (isNew) {
-    const { awardXP } = await import('@/lib/gamification')
-    await awardXP(user.id, 50, 'Career profile completed')
+    console.log("Query successful. Profile found:", !!data);
+    
+    return NextResponse.json({ profile: data });
+    
+  } catch (err: any) {
+    console.error("Server crash:", err);
+    console.error("Stack:", err.stack);
+    return NextResponse.json(
+      { error: "Internal server error: " + err.message },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ success: true, profile })
 }
 
-export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+// POST handler - saves/updates the user's profile
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
 
-  const { data: profile } = await supabase
-    .from('career_profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle()
+    console.log("Incoming profile:", body);
 
-  // Return as { data } to match all client-side callers
-  return NextResponse.json({ data: profile ?? null })
+    const {
+      user_id,
+      full_name,
+      current_level,
+      field_of_study,
+      institution,
+      graduation_year,
+      target_career,
+      target_industry,
+      career_goals,
+      location,
+      work_experience,
+      skills,
+      certifications,
+    } = body;
+
+    if (!user_id) {
+      return NextResponse.json(
+        { error: "Missing user_id" },
+        { status: 400 },
+      );
+    }
+
+    // First check if profile already exists
+    // Check if profile already exists (get the first one)
+    const { data: existingProfile } = await supabase
+     .from("career_profiles")
+     .select("id")
+     .eq("user_id", user_id)
+     .maybeSingle();  // This now works because we only have 1 profile
+
+  let result;
+
+if (existingProfile) {
+  // Update existing profile
+  result = await supabase
+    .from("career_profiles")
+    .update({
+      full_name,
+      current_level,
+      field_of_study,
+      institution,
+      graduation_year,
+      target_career,
+      target_industry,
+      career_goals,
+      location,
+      work_experience,
+      skills,
+      certifications,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", existingProfile.id)
+    .select()
+    .single();
+} else {
+  // Insert new profile
+  result = await supabase
+    .from("career_profiles")
+    .insert({
+      user_id,
+      full_name,
+      current_level,
+      field_of_study,
+      institution,
+      graduation_year,
+      target_career,
+      target_industry,
+      career_goals,
+      location,
+      work_experience,
+      skills,
+      certifications,
+    })
+    .select()
+    .single();
 }
 
-export async function PATCH(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+    const { data, error } = result;
 
-  let body: unknown
-  try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 },
+      );
+    }
 
-  const patchSchema = z.object({
-    target_career: z.string().min(1).max(200).optional(),
-    target_industry: z.string().max(200).optional(),
-  })
-  const parsed = patchSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
-
-  const updatePayload = { ...parsed.data, updated_at: new Date().toISOString() }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('career_profiles') as any)
-    .update(updatePayload)
-    .eq('user_id', user.id)
-
-  if (error) return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
-  return NextResponse.json({ success: true })
+    return NextResponse.json({ data });
+  } catch (err: any) {
+    console.error("Server crash:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
 }

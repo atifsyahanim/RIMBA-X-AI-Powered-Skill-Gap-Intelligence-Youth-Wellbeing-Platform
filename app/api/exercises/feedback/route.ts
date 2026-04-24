@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const MAX_LEN = 2000
     const safeStr = (v: unknown) => typeof v === 'string' ? v.slice(0, MAX_LEN) : ''
 
-    const model = getGeminiModel('gemini-2.0-flash')
+    const model = getGeminiModel('gemini-2.5-flash')
 
     if (type === 'quickcheck') {
       const q = safeStr(question)

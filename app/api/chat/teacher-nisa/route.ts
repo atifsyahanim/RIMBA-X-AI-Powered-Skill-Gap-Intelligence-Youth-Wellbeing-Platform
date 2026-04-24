@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
         const systemInstruction = TEACHER_NISA_PROMPT(moduleName, levelName, currentStep, visibleContext)
 
-        const model = getGeminiModel('gemini-2.0-flash', { systemInstruction: systemInstruction })
+        const model = getGeminiModel('gemini-2.5-flash', { systemInstruction: systemInstruction })
 
         const formattedHistory = (history || []).map((msg: any) => ({
             role: msg.role === 'user' ? 'user' : 'model',

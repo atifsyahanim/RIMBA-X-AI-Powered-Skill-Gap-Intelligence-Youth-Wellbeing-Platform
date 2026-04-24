@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   const modules = (modulesRes.data ?? []) as LearningModule[]
   const isFirstResume = (countRes.count ?? 0) === 0
 
-  const model = getGeminiModel('gemini-2.0-flash')
+  const model = getGeminiModel('gemini-2.5-flash')
   const prompt = RESUME_GEN_PROMPT(profile, certs, modules, sanitizeInput(target_role), tone)
 
   let rawText = ''

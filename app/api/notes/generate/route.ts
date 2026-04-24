@@ -92,7 +92,7 @@ Rules:
 - Derive everything strictly from the provided content
 - Output valid JSON only — no markdown fences, no extra text`
 
-    const model = getGeminiModel('gemini-2.0-flash')
+    const model = getGeminiModel('gemini-2.5-flash')
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.3, maxOutputTokens: 800 },

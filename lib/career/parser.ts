@@ -70,19 +70,16 @@ export function deriveModulesFromGap(
   analysisId: string,
   gapData: RawGapAnalysis
 ): Omit<Parameters<typeof placeholder>[0], 'id' | 'created_at'>[] {
-  return gapData.gap_skills.map(g => ({
+  return gapData.gap_skills.map((g, i) => ({
     user_id: userId,
     gap_analysis_id: analysisId,
     title: `Master ${g.skill}`,
     skill_target: g.skill,
-    description: `Close your skill gap in ${g.skill} (${g.category}) — estimated ${g.estimatedHours} hours.`,
-    difficulty: importanceToDifficulty(g.importance),
-    estimated_hours: g.estimatedHours ?? 10,
-    status: 'not_started' as const,
+    description: `Close your gap in ${g.skill}`,
+    level: i + 1,
+    status: "not_started",
     completion_pct: 0,
     resources: g.resources ?? [],
-    certificate_url: null,
-    completed_at: null,
   }))
 }
 

@@ -10,8 +10,8 @@ Candidate Profile:
 - Target Career: ${profile.target_career}
 - Target Industry: ${profile.target_industry ?? 'Not specified'}
 - Location: ${profile.location}
-- Current Skills: ${profile.skills.join(', ') || 'None listed'}
-- Existing Certifications: ${profile.certifications.join(', ') || 'None'}
+- Current Skills: ${profile.skills?.join(', ') || 'None listed'}
+- Existing Certifications: ${profile.certifications?.join(', ') || 'None'}
 - Career Goals: ${profile.career_goals ?? 'Not specified'}
 
 Perform a thorough skill gap intelligence for this candidate targeting a role as "${profile.target_career}" in Malaysia.
@@ -50,7 +50,7 @@ You are a Malaysian career coach. Based on this candidate's profile, recommend t
 Candidate:
 - Current Level: ${profile.current_level}
 - Field of Study: ${profile.field_of_study ?? 'Not specified'}
-- Skills: ${profile.skills.join(', ') || 'None listed'}
+- Skills: ${profile.skills?.join(', ') || 'None listed'}
 - Target Career Interest: ${profile.target_career}
 - Target Industry: ${profile.target_industry ?? 'Any'}
 - Career Goals: ${profile.career_goals ?? 'Not specified'}

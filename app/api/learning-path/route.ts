@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
         async start(controller) {
             try {
-                const model = getGeminiModel('gemini-2.0-flash', { systemInstruction: SYSTEM_PROMPT })
+                const model = getGeminiModel('gemini-2.5-flash', { systemInstruction: SYSTEM_PROMPT })
 
                 const chat = model.startChat({
                     history: formattedHistory,

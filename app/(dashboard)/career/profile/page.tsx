@@ -1,53 +1,83 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { UserCircle2, CheckCircle, ArrowRight, Sparkles } from 'lucide-react'
-import { CareerProfileForm } from '@/components/career/CareerProfileForm'
-import { Button } from '@/components/ui/Button'
-import Link from 'next/link'
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { UserCircle2, CheckCircle, ArrowRight, Sparkles } from "lucide-react";
+import { CareerProfileForm } from "@/components/career/CareerProfileForm";
+import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 interface Profile {
-  full_name?: string
-  current_level?: string
-  field_of_study?: string
-  institution?: string
-  graduation_year?: number
-  current_skills?: string[]
-  work_experience?: { company: string; role: string; duration_months: number }[]
-  certifications?: string[]
-  target_career?: string
-  target_industry?: string
-  career_goals?: string
-  location?: string
+  full_name?: string;
+  current_level?: string;
+  field_of_study?: string;
+  institution?: string;
+  graduation_year?: number;
+  current_skills?: string[];
+  work_experience?: {
+    company: string;
+    role: string;
+    duration_months: number;
+  }[];
+  certifications?: string[];
+  target_career?: string;
+  target_industry?: string;
+  career_goals?: string;
+  location?: string;
 }
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0 },
-}
+};
 
 export default function CareerProfilePage() {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saved, setSaved] = useState(false)
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    fetch('/api/career/profile')
-      .then(r => r.ok ? r.json() : { data: null })
-      .then(j => {
-        setProfile(j.data ?? null)
-        if (j.data) setSaved(true)
-      })
-      .catch(() => { })
-      .finally(() => setLoading(false))
-  }, [])
+    async function loadProfile() {
+      try {
+        // Get the current user first
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
+        // Fetch profile with user_id
+        const response = await fetch(`/api/career/profile?user_id=${user.id}`);
+        const json = await response.json();
+
+        setProfile(json.profile ?? null);
+        if (json.profile) setSaved(true);
+      } catch (error) {
+        console.error("Error loading profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProfile();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#FAFAF9]">
       {/* Hero */}
       <div className="relative overflow-hidden gradient-hero mx-6 mt-6 rounded-2xl">
-        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, white 0, white 1px, transparent 1px, transparent 28px), repeating-linear-gradient(90deg, white 0, white 1px, transparent 1px, transparent 28px)' }} />
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(0deg, white 0, white 1px, transparent 1px, transparent 28px), repeating-linear-gradient(90deg, white 0, white 1px, transparent 1px, transparent 28px)",
+          }}
+        />
         <div className="relative z-10 max-w-3xl mx-auto px-6 py-8 md:py-10">
           <motion.div
             initial={{ opacity: 0, y: 14 }}
@@ -59,11 +89,16 @@ export default function CareerProfilePage() {
               <div className="bg-white/20 rounded-full p-2">
                 <UserCircle2 size={20} className="!text-white" />
               </div>
-              <span className="!text-white/70 text-sm font-medium uppercase tracking-wider">Step 1 of 5</span>
+              <span className="!text-white/70 text-sm font-medium uppercase tracking-wider">
+                Step 1 of 5
+              </span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold !text-white mb-2">Build Your Profile</h1>
+            <h1 className="text-3xl md:text-4xl font-bold !text-white mb-2">
+              Build Your Profile
+            </h1>
             <p className="!text-white/75 text-base max-w-lg">
-              Provide your skills, education, and experience to help us analyze your readiness and identify gaps.
+              Provide your skills, education, and experience to help us analyze
+              your readiness and identify gaps.
             </p>
           </motion.div>
         </div>
@@ -90,20 +125,24 @@ export default function CareerProfilePage() {
             suppressHydrationWarning
           >
             <CareerProfileForm
-              initialData={profile ? {
-                full_name: profile.full_name,
-                current_level: profile.current_level,
-                field_of_study: profile.field_of_study,
-                institution: profile.institution,
-                graduation_year: profile.graduation_year?.toString(),
-                current_skills: profile.current_skills ?? [],
-                work_experience: profile.work_experience ?? [],
-                certifications: profile.certifications ?? [],
-                target_career: profile.target_career,
-                target_industry: profile.target_industry,
-                career_goals: profile.career_goals,
-                location: profile.location,
-              } : undefined}
+              initialData={
+                profile
+                  ? {
+                      full_name: profile.full_name,
+                      current_level: profile.current_level,
+                      field_of_study: profile.field_of_study,
+                      institution: profile.institution,
+                      graduation_year: profile.graduation_year?.toString(),
+                      current_skills: profile.current_skills ?? [],
+                      work_experience: profile.work_experience ?? [],
+                      certifications: profile.certifications ?? [],
+                      target_career: profile.target_career,
+                      target_industry: profile.target_industry,
+                      career_goals: profile.career_goals,
+                      location: profile.location,
+                    }
+                  : undefined
+              }
               onSuccess={() => setSaved(true)}
             />
 
@@ -120,8 +159,13 @@ export default function CareerProfilePage() {
                     <CheckCircle size={16} className="text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-green-800">Profile saved successfully!</p>
-                    <p className="text-xs text-green-600 mt-0.5">Your career profile is ready. Here&apos;s what you can do next:</p>
+                    <p className="text-sm font-semibold text-green-800">
+                      Profile saved successfully!
+                    </p>
+                    <p className="text-xs text-green-600 mt-0.5">
+                      Your career profile is ready. Here&apos;s what you can do
+                      next:
+                    </p>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
@@ -137,6 +181,5 @@ export default function CareerProfilePage() {
         )}
       </div>
     </div>
-  )
+  );
 }
-

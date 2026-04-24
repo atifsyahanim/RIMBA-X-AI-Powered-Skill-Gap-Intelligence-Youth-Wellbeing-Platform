@@ -1,40 +1,18 @@
-import DOMPurify from 'isomorphic-dompurify';
-
-/**
- * Sanitize HTML content to prevent XSS attacks
- */
-export function sanitizeHtml(dirty: string): string {
-  return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: [], // Strip all HTML tags
-    ALLOWED_ATTR: [],
-  });
+export function sanitizeHtml(input: string): string {
+  if (!input) return "";
+  return input.replace(/<[^>]*>/g, "");
 }
 
-/**
- * Sanitize user input - strips all HTML and trims whitespace
- */
 export function sanitizeInput(input: string): string {
-  if (typeof input !== 'string') return '';
-  
-  return DOMPurify.sanitize(input.trim(), {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: [],
-  });
+  if (typeof input !== "string") return "";
+  return input.trim().replace(/<[^>]*>/g, "");
 }
 
-/**
- * Sanitize and allow basic formatting in text
- */
-export function sanitizeRichText(dirty: string): string {
-  return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br'],
-    ALLOWED_ATTR: [],
-  });
+export function sanitizeRichText(input: string): string {
+  if (!input) return "";
+  return input.replace(/<[^>]*>/g, "");
 }
 
-/**
- * Escape special regex characters
- */
 export function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

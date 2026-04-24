@@ -63,7 +63,7 @@ const mainNavItems: NavItem[] = [
     icon: Trophy,
   },
   {
-    label: "CareSpace",
+    label: "Care Space",
     href: "/dashboard/carespace",
     icon: Heart,
   },

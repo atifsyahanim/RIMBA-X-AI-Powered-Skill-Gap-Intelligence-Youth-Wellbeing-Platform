@@ -149,6 +149,80 @@ function getAiFirstSentence(summary: string) {
   return sentences[0] ? sentences[0] + "." : clean.slice(0, 200);
 }
 
+// ── AI Summary parser ─────────────────────────────────────────────
+type SummarySection = {
+  kind: "strength" | "gaps" | "focus" | "other";
+  title: string;
+  items: string[];
+};
+
+function parseAiSummary(raw: string): SummarySection[] {
+  const lines = raw
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const out: SummarySection[] = [];
+  let current: SummarySection | null = null;
+
+  const headerRx =
+    /^(?:[🔍⚠️🎯💡✨]\s*)?(?:\*\*)?\s*(your\s+strength(?:s)?|your\s+gaps?|focus\s+next|strengths?|gaps?|next\s+focus)\s*(?:\*\*)?\s*[:：]?\s*$/iu;
+
+  for (const line of lines) {
+    const stripped = line.replace(/\*\*/g, "").trim();
+    const headerMatch = stripped.match(headerRx);
+    if (headerMatch) {
+      if (current) out.push(current);
+      const titleLower = headerMatch[1].toLowerCase();
+      let kind: SummarySection["kind"] = "other";
+      if (titleLower.includes("strength")) kind = "strength";
+      else if (titleLower.includes("gap")) kind = "gaps";
+      else if (titleLower.includes("focus")) kind = "focus";
+      current = { kind, title: headerMatch[1].trim(), items: [] };
+      continue;
+    }
+    const bullet = stripped.replace(/^[-*•]\s*/, "").trim();
+    if (!bullet) continue;
+    if (current) current.items.push(bullet);
+    else out.push({ kind: "other", title: "", items: [bullet] });
+  }
+  if (current) out.push(current);
+  return out;
+}
+
+const SUMMARY_STYLES: Record<
+  SummarySection["kind"],
+  { icon: string; label: string; bar: string; dot: string; bg: string }
+> = {
+  strength: {
+    icon: "💡",
+    label: "Your Strengths",
+    bar: "bg-emerald-400",
+    dot: "bg-emerald-400",
+    bg: "bg-emerald-50/50 border-emerald-100",
+  },
+  gaps: {
+    icon: "⚠️",
+    label: "Your Gaps",
+    bar: "bg-amber-400",
+    dot: "bg-amber-400",
+    bg: "bg-amber-50/50 border-amber-100",
+  },
+  focus: {
+    icon: "🎯",
+    label: "Focus Next",
+    bar: "bg-violet-400",
+    dot: "bg-violet-400",
+    bg: "bg-violet-50/50 border-violet-100",
+  },
+  other: {
+    icon: "•",
+    label: "Notes",
+    bar: "bg-gray-300",
+    dot: "bg-gray-300",
+    bg: "bg-gray-50 border-gray-100",
+  },
+};
+
 // ── ReadinessProgressBar ─────────────────────────────────────────
 interface ReadinessProgressBarProps {
   current: number;
@@ -591,184 +665,238 @@ export default function CareerAnalysePage() {
           >
             {/* 2-Panel Dense Split Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
-              {/* 📊 LEFT PANEL (1/3 width) - Score & Breakdown */}
+              {/* 📊 LEFT COLUMN (1/3 width) — stacked cards */}
+              <div className="lg:col-span-1 flex flex-col gap-6 h-full">
               <motion.div
                 variants={fadeUp}
                 suppressHydrationWarning
-                className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between h-full"
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col"
               >
-                <div className="flex flex-col items-center justify-center pt-4 pb-6 flex-1">
+                {/* Donut block */}
+                <div className="flex flex-col items-center text-center px-6 pt-8 pb-6 bg-gradient-to-b from-violet-50/40 to-transparent">
                   <SkillMatchScore
                     score={analysis.match_score}
-                    size={150}
+                    size={138}
                     targetRole={analysis.target_career}
                   />
-                  <div className="mt-6 text-center w-full">
-                    <p className="text-red-500 font-bold text-sm mb-1 px-4">
-                      You need +{Math.max(0, 100 - analysis.match_score)}% to
-                      reach {analysis.target_career}
-                    </p>
-                    <p className="text-gray-500 text-[10px] font-medium">
-                      Focus on {critical.length} critical gaps to improve
-                      fastest
-                    </p>
+                  <div className="mt-5 inline-flex items-center gap-2 bg-rose-50 border border-rose-100 rounded-full px-3 py-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-500">
+                      Gap
+                    </span>
+                    <span className="text-xs font-bold text-rose-600">
+                      +{Math.max(0, 100 - analysis.match_score)}% to reach{" "}
+                      {analysis.target_career}
+                    </span>
                   </div>
+                  <p className="mt-2 text-[11px] text-gray-400">
+                    Focus on{" "}
+                    <span className="font-bold text-gray-600">
+                      {critical.length}
+                    </span>{" "}
+                    critical gaps to improve fastest
+                  </p>
                 </div>
 
-                <div className="border-t border-gray-100 my-4" />
+                <div className="border-t border-gray-100" />
 
-                <div>
-                  <div className="flex items-center gap-2 mb-4 shrink-0">
-                    <TrendingUp size={14} className="text-primary" />
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                {/* Skill breakdown */}
+                <div className="p-6 flex-1 flex flex-col">
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp size={14} className="text-violet-500" />
+                    <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
                       Skill Breakdown
                     </p>
                   </div>
-                  <div className="w-full space-y-4">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-semibold text-gray-600 uppercase tracking-wider">
-                        Technical
-                      </span>
-                      <span className="font-bold text-gray-900">
-                        {Math.min(95, analysis.match_score + 15)}%
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        whileInView={{
-                          width: `${Math.min(95, analysis.match_score + 15)}%`,
-                        }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.8, delay: 0.1 }}
-                        suppressHydrationWarning
-                        className="h-full bg-blue-500 rounded-full"
-                      />
-                    </div>
+                  <div className="space-y-5 flex-1 flex flex-col justify-around">
+                    {[
+                      {
+                        label: "Technical",
+                        value: Math.min(95, analysis.match_score + 15),
+                        color: "bg-blue-500",
+                        delay: 0.1,
+                      },
+                      {
+                        label: "Analytical",
+                        value: Math.min(90, analysis.match_score + 5),
+                        color: "bg-violet-500",
+                        delay: 0.2,
+                      },
+                      {
+                        label: "Practical",
+                        value: Math.max(10, analysis.match_score - 10),
+                        color: "bg-amber-500",
+                        delay: 0.3,
+                      },
+                    ].map((row) => (
+                      <div key={row.label}>
+                        <div className="flex justify-between items-center text-xs mb-1.5">
+                          <span className="font-semibold text-gray-600 uppercase tracking-wider">
+                            {row.label}
+                          </span>
+                          <span className="font-bold text-gray-900 tabular-nums">
+                            {row.value}%
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            whileInView={{ width: `${row.value}%` }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8, delay: row.delay }}
+                            suppressHydrationWarning
+                            className={`h-full rounded-full ${row.color}`}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-semibold text-gray-600 uppercase tracking-wider">
-                        Analytical
-                      </span>
-                      <span className="font-bold text-gray-900">
-                        {Math.min(90, analysis.match_score + 5)}%
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        whileInView={{
-                          width: `${Math.min(90, analysis.match_score + 5)}%`,
-                        }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
-                        suppressHydrationWarning
-                        className="h-full bg-violet-500 rounded-full"
-                      />
-                    </div>
+                <div className="border-t border-gray-100" />
 
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-semibold text-gray-600 uppercase tracking-wider">
-                        Practical
-                      </span>
-                      <span className="font-bold text-gray-900">
-                        {Math.max(10, analysis.match_score - 10)}%
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        whileInView={{
-                          width: `${Math.max(10, analysis.match_score - 10)}%`,
-                        }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.8, delay: 0.3 }}
-                        suppressHydrationWarning
-                        className="h-full bg-amber-500 rounded-full"
-                      />
-                    </div>
+                {/* Quick stats tiles */}
+                <div className="grid grid-cols-3 divide-x divide-gray-100 bg-gray-50/60">
+                  <div className="p-4 text-center">
+                    <p className="text-lg font-black text-rose-600 tabular-nums">
+                      {critical.length}
+                    </p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                      Critical
+                    </p>
+                  </div>
+                  <div className="p-4 text-center">
+                    <p className="text-lg font-black text-blue-600 tabular-nums">
+                      {analysis.gap_skills.length}
+                    </p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                      Total Gaps
+                    </p>
+                  </div>
+                  <div className="p-4 text-center">
+                    <p className="text-lg font-black text-violet-600 tabular-nums">
+                      {analysis.required_skills.length}
+                    </p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                      Required
+                    </p>
                   </div>
                 </div>
               </motion.div>
 
-              {/* 🧠 RIGHT PANEL (2/3 width) - AI Summary & Required Skills */}
+              {/* Nice to Have — separate card in left column */}
+              {nice.length > 0 && (
+                <motion.div
+                  variants={fadeUp}
+                  suppressHydrationWarning
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex-1"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                      <Sparkles size={13} className="text-gray-400" />
+                      Nice to Have
+                    </p>
+                    <span className="text-[10px] font-bold text-gray-400 tabular-nums">
+                      {nice.length}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    {nice.map((gap, i) => (
+                      <motion.div
+                        key={gap.skill}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                        suppressHydrationWarning
+                      >
+                        <SkillGapCard gap={gap} />
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+              </div>
+
+              {/* 🧠 RIGHT PANEL (2/3 width) — AI Summary + Required Skills */}
               <motion.div
                 variants={fadeUp}
                 suppressHydrationWarning
-                className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-full"
+                className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-5"
               >
-                <div className="flex flex-col flex-1">
-                  <div className="flex items-center gap-2 shrink-0 mb-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
                       <Sparkles size={15} className="text-purple-500" />
                     </div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
                       AI Summary
                     </p>
                   </div>
-
-                  <div className="space-y-3 text-sm text-gray-700 leading-relaxed overflow-hidden py-1 mb-6">
-                    {analysis.ai_summary.split("\n").map((line, i) => {
-                      const t = line.trim();
-                      if (!t) return null;
-                      const isHeader =
-                        t.includes("🔍") ||
-                        t.includes("⚠️") ||
-                        t.includes("🎯") ||
-                        t.startsWith("**");
-                      return (
-                        <p
-                          key={i}
-                          className={
-                            isHeader
-                              ? "font-bold text-gray-900 mt-4 text-base flex items-center gap-2"
-                              : "pl-4 border-l-2 border-purple-500/20 ml-2 py-1 text-gray-600 block"
-                          }
-                        >
-                          {t.replace(/\*\*/g, "")}
-                        </p>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 pt-2 shrink-0 pb-4 mt-auto">
-                    <span className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100/80">
-                      <AlertCircle size={11} className="text-red-400" />
-                      <strong className="text-gray-700">
-                        {critical.length}
-                      </strong>{" "}
-                      critical gaps
-                    </span>
-                    <span className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100/80">
-                      <TrendingUp size={11} className="text-blue-400" />
-                      <strong className="text-gray-700">
-                        {analysis.gap_skills.length}
-                      </strong>{" "}
-                      total gaps
-                    </span>
-                    <span className="ml-auto text-[10px] text-gray-300">
-                      {new Date(analysis.created_at).toLocaleDateString(
-                        "en-MY",
-                      )}
-                    </span>
-                  </div>
+                  <span className="text-[10px] text-gray-300">
+                    {new Date(analysis.created_at).toLocaleDateString("en-MY")}
+                  </span>
                 </div>
 
-                <div className="border-t border-gray-100 my-4" />
+                {/* Structured sections */}
+                <div className="space-y-3">
+                  {parseAiSummary(analysis.ai_summary).map((section, si) => {
+                    const style = SUMMARY_STYLES[section.kind];
+                    if (section.items.length === 0) return null;
+                    return (
+                      <div
+                        key={si}
+                        className={`rounded-xl border ${style.bg} p-4`}
+                      >
+                        <div className="flex items-center gap-2 mb-2.5">
+                          <span className="text-base leading-none">
+                            {style.icon}
+                          </span>
+                          <h4 className="text-sm font-black text-gray-800">
+                            {section.title || style.label}
+                          </h4>
+                        </div>
+                        <ul className="space-y-1.5">
+                          {section.items.map((item, ii) => (
+                            <li
+                              key={ii}
+                              className="flex items-start gap-2 text-[13px] text-gray-700 leading-relaxed"
+                            >
+                              <span
+                                className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`}
+                              />
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
 
+                <div className="border-t border-gray-100" />
+
+                {/* Required skills */}
                 <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2 shrink-0">
-                    <Zap size={14} className="text-violet-500" /> Required for{" "}
-                    <span className="text-violet-600 font-bold">
-                      {analysis.target_career}
-                    </span>
-                  </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                      <Zap size={13} className="text-violet-500" />
+                      Required for{" "}
+                      <span className="text-violet-600">
+                        {analysis.target_career}
+                      </span>
+                    </p>
+                    {analysis.required_skills.length > 0 && (
+                      <span className="text-[10px] font-bold text-gray-400 tabular-nums">
+                        {analysis.required_skills.length} skills
+                      </span>
+                    )}
+                  </div>
                   {analysis.required_skills.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {analysis.required_skills.map((s) => (
                         <span
                           key={s.skill}
-                          className="text-xs bg-violet-50 text-violet-700 border border-violet-100 px-3 py-1.5 rounded-xl font-medium hover:bg-violet-100 transition-colors cursor-default"
+                          className="text-xs bg-violet-50 text-violet-700 border border-violet-100 px-2.5 py-1 rounded-lg font-medium hover:bg-violet-100 transition-colors cursor-default"
                         >
                           {s.skill}
                         </span>
@@ -782,33 +910,6 @@ export default function CareerAnalysePage() {
                 </div>
               </motion.div>
             </div>
-
-            {/* Nice to have */}
-            {nice.length > 0 && (
-              <motion.div variants={fadeUp} suppressHydrationWarning>
-                <div className="flex items-center gap-2 mb-3">
-                  <p className="text-sm font-bold text-gray-500">
-                    Nice to Have
-                  </p>
-                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">
-                    {nice.length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {nice.map((gap, i) => (
-                    <motion.div
-                      key={gap.skill}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04 }}
-                      suppressHydrationWarning
-                    >
-                      <SkillGapCard gap={gap} />
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
 
             {/* ── PERSONALIZED LEARNING ROADMAP ── */}
             {roadmapPhases.length > 0 && (
